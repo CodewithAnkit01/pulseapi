@@ -8,60 +8,60 @@ datasource db {
 }
 
 enum UserRole {
-    USER
-    ADMIN
-    SUPERADMIN
+  USER
+  ADMIN
+  SUPERADMIN
 }
 
 enum OrganizationRole {
-    OWNER
-    ADMIN
-    MEMBER
-    VIEWER
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
 }
 
 enum MonitorMethod {
-    GET
-    HEAD
-    POST
-    PUT
-    PATCH
-    DELETE
+  GET
+  HEAD
+  POST
+  PUT
+  PATCH
+  DELETE
 }
 
 enum MonitorStatus {
-    UP 
-    DOWN
-    PAUSED
+  UP
+  DOWN
+  PAUSED
 }
 
 enum CheckOutcome {
-    SUCCESS
-    FAILURE
-    TIMEOUT
-    ERROR
+  SUCCESS
+  FAILURE
+  TIMEOUT
+  ERROR
 }
 
 enum IncidentStatus {
-    OPEN
-    ACKNOWLEDGED
-    RESOLVED
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
 }
 
 enum IncidentEventType {
-      OPENED
+  OPENED
   ACKNOWLEDGED
   RESOLVED
   REOPENED
 }
 
 enum AlertChannelType {
-    EMAIL
-    WEBHOOK
+  EMAIL
+  WEBHOOK
 }
 
 enum SubscriptionStatus {
-    TRIALING
+  TRIALING
   ACTIVE
   PAST_DUE
   CANCELED
@@ -69,31 +69,13 @@ enum SubscriptionStatus {
 }
 
 model User {
-    id String @id @default(cuid())
+  id           String   @id @default(uuid())
+  name         String?
+  email        String   @unique
+  passwordHash String
+  role         UserRole @default(USER)
 
-    name String?
-    email String @unique
-    passwordHash String
-    role UserRole @default("USER")
-
-    memberShips MemberShips[]
-
-    createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([createdAt])
-}
-
-model Organization {
-    id String @id default(cuid())
-    name String
-    slug String @unique
-    description String?
-
-    memberShips MemberShips[]
-  projects    Project[]
-  alertChannels AlertChannel[]
-  subscription Subscription?
+  memberships Membership[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -101,11 +83,29 @@ model Organization {
   @@index([createdAt])
 }
 
-model Memberships {
-    id String @id default(cuid())
-    userId String
-    organizationId String
-    role OrganizationRole @default(MEMBER)
+model Organization {
+  id          String  @id @default(uuid())
+  name        String
+  slug        String  @unique
+  description String?
+
+  memberships   Membership[]
+  projects      Project[]
+  alertChannels AlertChannel[]
+  subscription  Subscription?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdAt])
+}
+
+model Membership {
+  id             String           @id @default(uuid())
+  userId         String
+  organizationId String
+  role           OrganizationRole @default(MEMBER)
+
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -134,32 +134,33 @@ model Project {
 }
 
 model Monitor {
-    id String @id @default(cuid())
+  id        String        @id @default(uuid())
+  projectId String
+  name      String
+  url       String
+  method    MonitorMethod @default(GET)
 
-    projectId String
-    name String
-    url String
-    method MonitorMethod @default(GET)
+  // Request configuration
+  headers             Json?
+  expectedStatusCodes Int[] @default([200])
+  timeoutMs           Int   @default(5000)
 
-    headers Json?
-    expectedStatusCodes Int[] @default([200])
-    timeoutMs           Int   @default(5000)
+  // Scheduling and incident thresholds
+  intervalSeconds      Int @default(60)
+  failureThreshold     Int @default(3)
+  recoveryThreshold    Int @default(2)
+  consecutiveFailures  Int @default(0)
+  consecutiveSuccesses Int @default(0)
 
-intervalSeconds       Int     @default(60)
-  failureThreshold      Int     @default(3)
-  recoveryThreshold     Int     @default(2)
-  consecutiveFailures   Int     @default(0)
-  consecutiveSuccesses  Int     @default(0)
-
-  enabled     Boolean      @default(true)
-  status      MonitorStatus @default(UP)
+  enabled       Boolean       @default(true)
+  status        MonitorStatus @default(UP)
   lastCheckedAt DateTime?
   nextCheckAt   DateTime?
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  checkResults CheckResult[]
-  incidents    Incident[]
+  checkResults  CheckResult[]
+  incidents     Incident[]
   alertChannels MonitorAlertChannel[]
 
   createdAt DateTime @default(now())
@@ -169,18 +170,17 @@ intervalSeconds       Int     @default(60)
   @@index([enabled, nextCheckAt])
 }
 
- model CheckResult {
-    id String @id @default(cuid())
-    monitorId String
-    outcome CheckOutcome
+model CheckResult {
+  id        String       @id @default(uuid())
+  monitorId String
+  outcome   CheckOutcome
 
-    statusCode Int?
-    durationMs Int?
-  errorType  String?
+  statusCode   Int?
+  durationMs   Int?
+  errorType    String?
   errorMessage String?
 
-
-checkedAt DateTime @default(now())
+  checkedAt DateTime @default(now())
 
   monitor Monitor @relation(fields: [monitorId], references: [id], onDelete: Cascade)
 
@@ -189,7 +189,88 @@ checkedAt DateTime @default(now())
   @@index([monitorId, outcome, checkedAt])
 }
 
-
 model Incident {
-    
+  id        String         @id @default(uuid())
+  monitorId String
+  status    IncidentStatus @default(OPEN)
+
+  title       String
+  description String?
+
+  openedAt       DateTime  @default(now())
+  acknowledgedAt DateTime?
+  resolvedAt     DateTime?
+
+  monitor Monitor         @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+  events  IncidentEvent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([monitorId, status, openedAt(sort: Desc)])
+  @@index([status, openedAt(sort: Desc)])
+}
+
+model IncidentEvent {
+  id         String            @id @default(uuid())
+  incidentId String
+  type       IncidentEventType
+  message    String?
+
+  createdAt DateTime @default(now())
+
+  incident Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([incidentId, createdAt])
+}
+
+model AlertChannel {
+  id             String           @id @default(uuid())
+  organizationId String
+  name           String
+  type           AlertChannelType
+  destination    String
+
+  // Store encrypted secrets or webhook credentials,
+  // never plaintext sensitive values.
+  secretEncrypted String?
+
+  enabled Boolean @default(true)
+
+  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  monitors     MonitorAlertChannel[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, enabled])
+}
+
+model MonitorAlertChannel {
+  monitorId      String
+  alertChannelId String
+
+  monitor      Monitor      @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+  alertChannel AlertChannel @relation(fields: [alertChannelId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([monitorId, alertChannelId])
+  @@index([alertChannelId])
+}
+
+model Subscription {
+  id             String             @id @default(uuid())
+  organizationId String             @unique
+  plan           String             @default("FREE")
+  status         SubscriptionStatus @default(TRIALING)
+
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  cancelAtPeriodEnd  Boolean   @default(false)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

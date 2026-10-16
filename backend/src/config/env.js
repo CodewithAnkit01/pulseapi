@@ -11,6 +11,17 @@ const envSchema = z.object({
   FRONTEND_URL: z.string().url(),
 
   DATABASE_URL: z.string().min(1),
+
+  ACCESS_TOKEN_SECRET: z.string().min(32),
+
+ACCESS_TOKEN_TTL: z.string().default("15m"),
+
+REFRESH_TOKEN_DAYS: z.coerce
+  .number()
+  .int()
+  .min(1)
+  .max(30)
+  .default(7),
 });
 
 const result = envSchema.safeParse(process.env);
@@ -20,5 +31,6 @@ if (!result.success) {
   console.error(result.error.flatten().fieldErrors);
   process.exit(1);
 }
+
 
 export const env = result.data;

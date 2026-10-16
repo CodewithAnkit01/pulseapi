@@ -4,6 +4,8 @@ import helmet from "helmet";
 
 import { env } from "./config/env.js";
 import healthRoutes from "./routes/health.routes.js";
+import cookieParser from "cookie-parser";
+import authRoutes from "./modules/auth/auth.routes.js";
 
 import {
   notFoundHandler,
@@ -34,6 +36,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/v1/health", healthRoutes);
+app.use("/api/v1/auth", authRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

@@ -13,6 +13,20 @@ export const errorHandler = (err, req, res, next) => {
     return next(err);
   }
 
+  if (err.name === "ZodError") {
+    return res.status(400).json({
+      success: false,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "Request validation failed",
+        details: err.issues.map((issue) => ({
+          field: issue.path.join("."),
+          message: issue.message,
+        })),
+      },
+    });
+  }
+
   const statusCode = err.statusCode || 500;
 
   if (statusCode >= 500) {

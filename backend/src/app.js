@@ -7,7 +7,7 @@ import healthRoutes from "./routes/health.routes.js";
 import cookieParser from "cookie-parser";
 import authRoutes from "./modules/auth/auth.routes.js";
 import organizationRoutes from "./modules/organizations/organization.routes.js";
-
+import { globalApiLimiter } from "./middleware/rate-limit.middleware.js";
 import {
   notFoundHandler,
   errorHandler,
@@ -27,7 +27,7 @@ app.use(
 
 app.use(express.json({ limit: "100kb" }));
 app.use(express.urlencoded({ extended: false, limit: "100kb" }));
-
+app.use(cookieParser());
 app.get("/", (req, res) => {
   res.status(200).json({
     success: true,
@@ -35,6 +35,7 @@ app.get("/", (req, res) => {
     version: "1.0.0",
   });
 });
+app.use("/api/v1", globalApiLimiter);
 
 app.use("/api/v1/health", healthRoutes);
 app.use("/api/v1/auth", authRoutes);

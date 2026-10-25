@@ -9,6 +9,15 @@ import {
   remove,
 } from "./monitor.controller.js";
 
+import {
+  getMonitorCheckHistory,
+  getMonitorUptime,
+} from "./monitor-history.controller.js";
+
+import {
+  getMonitorAnalytics,
+} from "./monitor-analytics.controller.js";
+
 import { requireAuth } from "../../middleware/auth.middleware.js";
 
 import {
@@ -60,6 +69,27 @@ router.delete(
   ...projectAccess,
   canManageMonitors,
   remove,
+);
+
+router.get(
+  "/:projectId/monitors/:monitorId/checks",
+  requireAuth,
+  ...projectAccess,
+  getMonitorCheckHistory
+);
+
+router.get(
+  "/:projectId/monitors/:monitorId/uptime",
+  requireAuth,
+  ...projectAccess,
+  getMonitorUptime
+);
+
+router.get(
+  "/:projectId/monitors/:monitorId/analytics",
+  requireAuth,
+  ...projectAccess,
+  getMonitorAnalytics,
 );
 
 export default router;

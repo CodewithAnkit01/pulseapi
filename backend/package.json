@@ -3,16 +3,22 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon src/server.js",
-    "start": "node src/server.js",
-    "worker:scheduler": "node src/workers/scheduler.worker.js",
-    "worker:monitor": "node src/workers/monitor.worker.js",
-    "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev",
-    "db:studio": "prisma studio"
-  },
+ 
+"scripts": {
+  "test": "echo \"Error: no test specified\" && exit 1",
+  "dev": "nodemon src/server.js",
+  "start": "node src/server.js",
+
+  "worker:scheduler": "node src/workers/scheduler.worker.js",
+  "worker:monitor": "node src/workers/monitor.worker.js",
+  "worker:notifications": "node src/workers/notification.worker.js",
+  "worker:dispatcher": "node src/workers/notification-dispatcher.worker.js",
+
+  "db:generate": "prisma generate",
+  "db:migrate": "prisma migrate dev",
+  "db:studio": "prisma studio"
+}
+,
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -29,6 +35,7 @@
     "helmet": "^8.3.0",
     "ioredis": "^6.0.0",
     "jsonwebtoken": "^9.0.3",
+    "nodemailer": "^10.3.1",
     "zod": "^4.6.7"
   },
   "devDependencies": {

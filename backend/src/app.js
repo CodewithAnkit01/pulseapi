@@ -14,6 +14,7 @@ import {
 } from "./middleware/error.middleware.js";
 import projectRoutes from "./modules/projects/project.routes.js";
 import monitorRoutes from "./modules/monitors/monitor.routes.js";
+import alertChannelRoutes from "./modules/alert-channels/alert-channel.routes.js";
 
 const app = express();
 
@@ -44,6 +45,7 @@ app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/organizations", organizationRoutes);
 app.use("/api/v1/organizations", projectRoutes);
 app.use("/api/v1/projects", monitorRoutes);
+app.use("/api/v1/organizations", alertChannelRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

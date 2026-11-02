@@ -68,6 +68,13 @@ enum SubscriptionStatus {
   INCOMPLETE
 }
 
+enum NotificationDeliveryStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+}
+
 model User {
   id           String   @id @default(uuid())
   name         String?
@@ -221,8 +228,9 @@ model Incident {
   acknowledgedAt DateTime?
   resolvedAt     DateTime?
 
-  monitor Monitor         @relation(fields: [monitorId], references: [id], onDelete: Cascade)
-  events  IncidentEvent[]
+  monitor                Monitor                @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+  events                 IncidentEvent[]
+  notificationDeliveries NotificationDelivery[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -257,8 +265,9 @@ model AlertChannel {
 
   enabled Boolean @default(true)
 
-  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  monitors     MonitorAlertChannel[]
+  organization           Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  monitors               MonitorAlertChannel[]
+  notificationDeliveries NotificationDelivery[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -293,4 +302,41 @@ model Subscription {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model NotificationOutbox {
+  id          String            @id @default(uuid())
+  incidentId  String
+  eventType   IncidentEventType
+  payload     Json
+  processedAt DateTime?
+  attempts    Int               @default(0)
+  lastError   String?
+  createdAt   DateTime          @default(now())
+
+  @@unique([incidentId, eventType])
+  @@index([processedAt, createdAt])
+}
+
+model NotificationDelivery {
+  id             String            @id @default(uuid())
+  incidentId     String
+  eventType      IncidentEventType
+  alertChannelId String
+
+  status       NotificationDeliveryStatus @default(PENDING)
+  attempts     Int                        @default(0)
+  lastError    String?
+  sentAt       DateTime?
+  processingAt DateTime?
+  incident     Incident                   @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  alertChannel AlertChannel @relation(fields: [alertChannelId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([incidentId, eventType, alertChannelId])
+  @@index([status, createdAt])
+  @@index([alertChannelId, createdAt])
 }
